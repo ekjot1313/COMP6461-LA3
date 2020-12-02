@@ -34,6 +34,10 @@ public class HTTPServer implements Server {
             ClientThread clientThread = new ClientThread(client, outbox, VERBOSE);
             clientThread.start();
         }
+
+
+
+
     }
 
     @Override
