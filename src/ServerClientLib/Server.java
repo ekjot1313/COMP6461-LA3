@@ -1,4 +1,6 @@
-package ServerLib;
+package ServerClientLib;
+
+import ServerClientLib.dao.Message;
 
 import java.io.IOException;
 import java.util.concurrent.BlockingQueue;

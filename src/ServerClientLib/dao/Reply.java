@@ -1,4 +1,4 @@
-package ServerLib;
+package ServerClientLib.dao;
 
 public class Reply extends Message{
     private String contentType=null;

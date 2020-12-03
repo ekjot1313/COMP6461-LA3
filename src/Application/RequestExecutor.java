@@ -1,6 +1,6 @@
 package Application;
 
-import ServerLib.Reply;
+import ServerClientLib.dao.Reply;
 
 import java.io.*;
 import java.nio.file.Files;

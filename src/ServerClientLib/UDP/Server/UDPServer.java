@@ -1,4 +1,8 @@
-package ServerLib;
+package ServerClientLib.UDP.Server;
+
+import ServerClientLib.Server;
+import ServerClientLib.dao.Message;
+import ServerClientLib.UDP.Packet;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -11,8 +15,6 @@ import java.util.HashMap;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
-import static java.nio.charset.StandardCharsets.UTF_8;
-
 public class UDPServer implements Server {
 
     private int PORT;
@@ -20,7 +22,7 @@ public class UDPServer implements Server {
     private boolean VERBOSE;
 
     private BlockingQueue<Message> outbox = new LinkedBlockingQueue<>();
-    private HashMap<DatagramSocket,UDPClientThread> clientThreads=new HashMap<>();
+    private HashMap<DatagramSocket, UDPClientThread> clientThreads=new HashMap<>();
 
     public UDPServer(int port, String root, boolean verbose) {
         PORT = port;

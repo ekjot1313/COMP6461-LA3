@@ -1,4 +1,4 @@
-package ClientLib;
+package ServerClientLib.dao;
 
 import java.util.HashMap;
 

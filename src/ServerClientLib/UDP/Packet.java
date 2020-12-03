@@ -1,4 +1,4 @@
-package ServerLib;
+package ServerClientLib.UDP;
 
 import java.io.IOException;
 import java.net.Inet4Address;

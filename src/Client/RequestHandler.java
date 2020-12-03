@@ -1,8 +1,8 @@
 package Client;
 
-import ClientLib.Client;
-import ClientLib.Command;
-import ClientLib.UDPClient;
+import ServerClientLib.Client;
+import ServerClientLib.dao.Command;
+import ServerClientLib.UDP.Client.UDPClient;
 
 import java.io.BufferedWriter;
 import java.io.FileWriter;

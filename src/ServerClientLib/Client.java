@@ -1,4 +1,6 @@
-package ClientLib;
+package ServerClientLib;
+
+import ServerClientLib.dao.Command;
 
 import java.io.IOException;
 

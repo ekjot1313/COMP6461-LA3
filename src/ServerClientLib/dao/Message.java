@@ -1,4 +1,4 @@
-package ServerLib;
+package ServerClientLib.dao;
 
 import java.util.concurrent.BlockingQueue;
 

@@ -1,8 +1,8 @@
 package Application;
 
-import ServerLib.HTTPServer;
-import ServerLib.Message;
-import ServerLib.Server;
+import ServerClientLib.TCP.Server.TCPServer;
+import ServerClientLib.dao.Message;
+import ServerClientLib.Server;
 
 import java.io.IOException;
 import java.util.concurrent.BlockingQueue;
@@ -27,7 +27,7 @@ public class httpfs {
     }
 
     private static void initiateServer() throws IOException {
-        Server server = new HTTPServer(PORT, ROOT, VERBOSE);
+        Server server = new TCPServer(PORT, ROOT, VERBOSE);
         startReadingClientRequests(server);
     }
 

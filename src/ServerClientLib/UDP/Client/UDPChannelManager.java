@@ -1,6 +1,6 @@
-package ClientLib;
+package ServerClientLib.UDP.Client;
 
-import ServerLib.Packet;
+import ServerClientLib.UDP.Packet;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;

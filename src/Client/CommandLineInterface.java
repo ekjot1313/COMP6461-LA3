@@ -1,6 +1,6 @@
 package Client;
 
-import ClientLib.Command;
+import ServerClientLib.dao.Command;
 
 import java.io.BufferedReader;
 import java.io.FileReader;

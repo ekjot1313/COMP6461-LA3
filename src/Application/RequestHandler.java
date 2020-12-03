@@ -1,7 +1,7 @@
 package Application;
 
-import ServerLib.Message;
-import ServerLib.Reply;
+import ServerClientLib.dao.Message;
+import ServerClientLib.dao.Reply;
 
 import java.util.concurrent.BlockingQueue;
 

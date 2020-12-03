@@ -1,4 +1,7 @@
-package ClientLib;
+package ServerClientLib.TCP.Client;
+
+import ServerClientLib.Client;
+import ServerClientLib.dao.Command;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -9,7 +12,7 @@ import java.net.Socket;
 import java.net.URL;
 import java.util.HashMap;
 
-public class HTTPClient implements Client {
+public class TCPClient implements Client {
     private Command cmd;
     private URL url;
     private Socket socket;

@@ -1,4 +1,7 @@
-package ClientLib;
+package ServerClientLib.UDP.Client;
+
+import ServerClientLib.Client;
+import ServerClientLib.dao.Command;
 
 import java.io.IOException;
 import java.net.*;

@@ -1,4 +1,9 @@
-package ServerLib;
+package ServerClientLib.UDP.Server;
+
+import ServerClientLib.dao.Message;
+import ServerClientLib.dao.Reply;
+import ServerClientLib.UDP.MultiPacketHandler;
+import ServerClientLib.UDP.Packet;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -20,8 +25,7 @@ public class UDPClientThread extends Thread {
     private BlockingQueue<Message> outbox;
     private final boolean VERBOSE;
     private volatile static int numberOfClients = 0;
-    private boolean allPacketsReceived = false;
-
+    private MultiPacketHandler pktHandler=new MultiPacketHandler();
 
     InetAddress clientAddr;
     Integer clientPort;
@@ -52,19 +56,14 @@ public class UDPClientThread extends Thread {
 
     private void handleClient() throws IOException, InterruptedException {
         while (true) {
-            if (allPacketsReceived) {
-                String body = mergeAllPackets();
+            if (pktHandler.allPacketsReceived()) {
+                String body = pktHandler.mergeAllPackets();
                 handleInput(body);
                 break;
             }
         }
 
 
-    }
-
-    private String mergeAllPackets() {
-
-        return "";
     }
 
     private void handleInput(String body) throws InterruptedException, IOException {
@@ -88,15 +87,21 @@ public class UDPClientThread extends Thread {
         }
     }
 
-    private void handleOutput(String payload) throws IOException {
-        Packet p = new Packet.Builder()
-                .setType(0)
-                .setSequenceNumber(1L)
-                .setPortNumber(clientPort)
-                .setPeerAddress(clientAddr)
-                .setPayload(payload.getBytes())
-                .create();
-        channel.send(p.toBuffer(), routerAddr);
+    private void handleOutput(String body) throws IOException {
+        ArrayList<String> payloads=pktHandler.generatePayloads(body);
+        long seqNum=1L;
+
+       for(String payload:payloads){
+           Packet p = new Packet.Builder()
+                   .setType(0)
+                   .setSequenceNumber(seqNum++)
+                   .setPortNumber(clientPort)
+                   .setPeerAddress(clientAddr)
+                   .setPayload(payload.getBytes())
+                   .create();
+           channel.send(p.toBuffer(), routerAddr);
+       }
+
     }
 
 
@@ -154,6 +159,6 @@ public class UDPClientThread extends Thread {
         clientAddr = packet.getPeerAddress();
         clientPort = packet.getPeerPort();
 
-
+        pktHandler.addNewPacket(packet);
     }
 }

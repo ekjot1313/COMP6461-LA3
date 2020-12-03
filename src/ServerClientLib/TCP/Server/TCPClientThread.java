@@ -1,4 +1,7 @@
-package ServerLib;
+package ServerClientLib.TCP.Server;
+
+import ServerClientLib.dao.Message;
+import ServerClientLib.dao.Reply;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -14,7 +17,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-class ClientThread extends Thread {
+public class TCPClientThread extends Thread {
 
     private Boolean requestMade = false;
     private Socket client;
@@ -25,7 +28,7 @@ class ClientThread extends Thread {
     private final boolean VERBOSE;
     private volatile static int numberOfClients = 0;
 
-    ClientThread(Socket clientSocket, BlockingQueue<Message> outbox, boolean VERBOSE) {
+    public TCPClientThread(Socket clientSocket, BlockingQueue<Message> outbox, boolean VERBOSE) {
         this.client = clientSocket;
         this.outbox = outbox;
         this.VERBOSE = VERBOSE;
@@ -51,7 +54,7 @@ class ClientThread extends Thread {
             handleInput(body);
 
         } catch (IOException | InterruptedException ex) {
-            Logger.getLogger(ClientThread.class.getName()).log(Level.SEVERE, null, ex);
+            Logger.getLogger(TCPClientThread.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
 

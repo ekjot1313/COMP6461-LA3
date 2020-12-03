@@ -1,4 +1,7 @@
-package ServerLib;
+package ServerClientLib.TCP.Server;
+
+import ServerClientLib.Server;
+import ServerClientLib.dao.Message;
 
 import java.io.IOException;
 import java.net.ServerSocket;
@@ -6,7 +9,7 @@ import java.net.Socket;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
-public class HTTPServer implements Server {
+public class TCPServer implements Server {
 
     private int PORT;
     private String ROOT;
@@ -14,7 +17,7 @@ public class HTTPServer implements Server {
 
     private BlockingQueue<Message> outbox = new LinkedBlockingQueue<>();
 
-    public HTTPServer(int port, String root, boolean verbose) {
+    public TCPServer(int port, String root, boolean verbose) {
         PORT=port;
         ROOT=root;
         VERBOSE=verbose;
@@ -31,8 +34,8 @@ public class HTTPServer implements Server {
                 System.out.println("Waiting for a Client to connect.");
             Socket client = serverSocket.accept();
 
-            ClientThread clientThread = new ClientThread(client, outbox, VERBOSE);
-            clientThread.start();
+            TCPClientThread TCPClientThread = new TCPClientThread(client, outbox, VERBOSE);
+            TCPClientThread.start();
         }
 
 
