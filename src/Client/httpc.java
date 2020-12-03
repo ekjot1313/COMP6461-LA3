@@ -18,6 +18,10 @@ public class httpc {
         while (input.length() > 0) {
 
             Command cmd = CommandLineInterface.parseInput(input);
+            cmd.setRouterAddr("localhost");
+            cmd.setRouterPort(3000);
+            cmd.setServerPort(8007);
+
             RequestHandler.handle(cmd);
 
             input=readCommand();

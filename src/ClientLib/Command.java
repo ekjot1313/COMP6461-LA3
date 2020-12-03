@@ -71,8 +71,37 @@ public class Command {
     private String url;
 
     private boolean valid;
+
+    public String getRouterAddr() {
+        return routerAddr;
+    }
+
+    public void setRouterAddr(String routerAddr) {
+        this.routerAddr = routerAddr;
+    }
+
+    public int getRouterPort() {
+        return routerPort;
+    }
+
+    public void setRouterPort(int routerPort) {
+        this.routerPort = routerPort;
+    }
+
     private boolean o;
     private String fileName;
+
+    private String routerAddr;
+    private int routerPort;
+    private int serverPort;
+
+    public int getServerPort() {
+        return serverPort;
+    }
+
+    public void setServerPort(int serverPort) {
+        this.serverPort = serverPort;
+    }
 
     public void setHttpc(boolean httpc) {
         this.httpc = httpc;

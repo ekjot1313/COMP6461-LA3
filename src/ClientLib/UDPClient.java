@@ -1,22 +1,16 @@
 package ClientLib;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.PrintWriter;
-import java.net.InetAddress;
-import java.net.Socket;
-import java.net.URL;
+import java.net.*;
 import java.util.HashMap;
 
-public class UDPClient implements Client{
+public class UDPClient implements Client {
     private Command cmd;
-    private URL url;
-    private Socket socket;
-    final int PORT = 8080;
-    private PrintWriter send;
-    private BufferedReader receive;
     final private int redirectCycles = 3;
+
+    SocketAddress routerAddress;
+    InetSocketAddress serverAddress;
+    URL url;
 
     @Override
     public String getOutput(Command cmd) throws IOException {
@@ -24,26 +18,83 @@ public class UDPClient implements Client{
         this.cmd = cmd;
 
         int cycle = 0;
+        //repeat if reply is of redirection type and cycle is less than allowed no of redirections
         do {
 
-            if (!reply.isEmpty()) {
-                cmd.setUrl(extractUrl(reply));
-                System.out.println("Redirecting to: " + cmd.getUrl());
-            }
+            handleRedirection(cmd, reply);
 
-            reply = "";
+            UDPChannelManager channelManager = new UDPChannelManager(routerAddress, serverAddress);
+            channelManager.openChannel();
 
-            connectSocket();
+            sendMsg(cmd, channelManager);
 
-            if (cmd.isGet()) {
-                reply = optionGet();
-            } else if (cmd.isPost()) {
-                reply = optionPost();
-            }
+            reply = channelManager.getReply();
+
         } while (++cycle <= redirectCycles && isRedirectResponse(reply));
 
+        return decorateReply(cmd, reply);
+    }
+
+    private void sendMsg(Command cmd, UDPChannelManager channelManager) throws IOException {
+        String msg = "";
+        if (cmd.isGet()) {
+            msg = addGetHeaders(cmd);
+        } else if (cmd.isPost()) {
+            msg = addPostHeaders(cmd);
+        }
+        channelManager.sendMsg(msg);
+    }
+
+    private String addPostHeaders(Command cmd) {
+        String msg = "";
+        String hostName = url.getHost();
+        int index = (url.toString().indexOf(hostName)) + hostName.length();
+        String path = url.toString().substring(index);
+        msg.concat("POST " + path + " HTTP/1.0\r\n");
+        msg.concat("Host: " + hostName + "\r\n");
+        if (cmd.isH()) {
+            HashMap<String, String> headerInfo = cmd.gethArg();
+            for (String temp : headerInfo.keySet()) {
+                msg.concat(temp + ": " + headerInfo.get(temp) + "\r\n");
+            }
+        }
+
+        if (cmd.isD() || cmd.isF()) {
+            String arg = cmd.isD() ? cmd.getdArg() : cmd.getfArg();
+            if (arg.startsWith("'") || arg.startsWith("\"")) {
+                arg = arg.substring(1, arg.length() - 1);
+                msg.concat("Content-Length: " + arg.length() + "\r\n");
+                msg.concat("\r\n");
+                msg.concat(arg + "\r\n");
+            } else {
+                msg.concat(arg + "\r\n");
+            }
+        } else {
+            msg.concat("\r\n");
+        }
+        return msg;
+    }
+
+    private String addGetHeaders(Command cmd) throws IOException {
+        String msg = "";
+        String hostName = url.getHost();
+        int index = (url.toString().indexOf(hostName)) + hostName.length();
+        String path = url.toString().substring(index);
+        msg.concat("GET " + path + " HTTP/1.0\r\n");
+        msg.concat("Host: " + hostName + "\r\n");
+        if (cmd.isH()) {
+            HashMap<String, String> headerInfo = cmd.gethArg();
+            for (String temp : headerInfo.keySet()) {
+                msg.concat(temp + ": " + headerInfo.get(temp) + "\r\n");
+            }
+        }
+        msg.concat("\r\n");
+        return msg;
+    }
+
+    private String decorateReply(Command cmd, String reply) {
         if (cmd.isV()) {
-            return reply.substring(0,reply.length()-1);
+            return reply.substring(0, reply.length() - 1);
         } else {
             String[] splitReply = reply.split("\r\n\r\n", 2);
             if (splitReply.length == 1) {
@@ -52,6 +103,18 @@ public class UDPClient implements Client{
                 return splitReply[1].trim();
             }
         }
+    }
+
+
+    private void handleRedirection(Command cmd, String reply) throws MalformedURLException {
+        if (!reply.isEmpty()) {
+            cmd.setUrl(extractUrl(reply));
+            System.out.println("Redirecting to: " + cmd.getUrl());
+        }
+
+        routerAddress = new InetSocketAddress(cmd.getRouterAddr(), cmd.getRouterPort());
+        url = new URL(cmd.getUrl());
+        serverAddress = new InetSocketAddress(url.getHost(), cmd.getServerPort());
     }
 
     private String extractUrl(String reply) {
@@ -71,87 +134,5 @@ public class UDPClient implements Client{
         }
         return false;
     }
-
-    private void connectSocket() throws IOException {
-        url = new URL(cmd.getUrl());
-        InetAddress address = InetAddress.getByName(url.getHost());
-        socket = new Socket(address, PORT);
-        send = new PrintWriter(socket.getOutputStream());
-        receive = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-    }
-
-
-    private String optionPost() throws IOException {
-        String hostName = url.getHost();
-        int index = (url.toString().indexOf(hostName)) + hostName.length();
-        String path = url.toString().substring(index);
-        send.println("POST " + path + " HTTP/1.0");
-        send.println("Host: " + hostName);
-        if (cmd.isH()) {
-            HashMap<String, String> headerInfo = cmd.gethArg();
-            for (String temp : headerInfo.keySet()) {
-                send.println(temp + ": " + headerInfo.get(temp));
-            }
-        }
-
-        if (cmd.isD() || cmd.isF()) {
-            String arg = cmd.isD() ? cmd.getdArg() : cmd.getfArg();
-            if (arg.startsWith("'") || arg.startsWith("\"")) {
-                arg = arg.substring(1, arg.length() - 1);
-                send.println("Content-Length: " + arg.length());
-                send.println("");
-                send.println(arg);
-            } else {
-                send.println(arg);
-            }
-        } else {
-            send.println("");
-        }
-        send.flush();
-
-        StringBuffer reply = new StringBuffer();
-        while (true) {
-            if (receive.ready()) {
-                int temp = receive.read();
-                while (temp != -1) {
-                    reply.append((char) temp);
-                    temp = receive.read();
-                }
-                break;
-            }
-        }
-        return reply.toString();
-    }
-
-    private String optionGet() throws IOException {
-        String hostName = url.getHost();
-        int index = (url.toString().indexOf(hostName)) + hostName.length();
-        String path = url.toString().substring(index);
-        send.println("GET " + path + " HTTP/1.0");
-        send.println("Host: " + hostName);
-        if (cmd.isH()) {
-            HashMap<String, String> headerInfo = cmd.gethArg();
-            for (String temp : headerInfo.keySet()) {
-                send.println(temp + ": " + headerInfo.get(temp));
-            }
-        }
-        send.println("");
-        send.flush();
-
-        StringBuffer reply = new StringBuffer();
-        while (true) {
-            if (receive.ready()) {
-                int temp = receive.read();
-                while (temp != -1) {
-                    reply.append((char) temp);
-                    temp = receive.read();
-                }
-                break;
-            }
-        }
-        send.println("");
-        return reply.toString();
-    }
-
 
 }
