@@ -66,7 +66,7 @@ public class UDPClientThread extends Thread {
 
     }
 
-    private void handleInput(String body) throws InterruptedException, IOException {
+    private void handleInput(String body) throws IOException {
         Message msg = new Message(body, inbox);
         outbox.add(msg);
         requestMade = true;
@@ -100,6 +100,7 @@ public class UDPClientThread extends Thread {
                    .setPayload(payload.getBytes())
                    .create();
            channel.send(p.toBuffer(), routerAddr);
+           System.out.println("Reply Packet #"+seqNum+" sent to "+routerAddr);
        }
 
     }

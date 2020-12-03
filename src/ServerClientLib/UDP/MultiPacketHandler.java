@@ -1,7 +1,5 @@
 package ServerClientLib.UDP;
 
-import ServerClientLib.UDP.Packet;
-
 import java.io.ByteArrayOutputStream;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -57,23 +55,26 @@ public class MultiPacketHandler {
 
     public ArrayList<String> generatePayloads(String body) {
         byte[] bodyBytes = body.getBytes();
-        int bodyLen = bodyBytes.length - 1;
-        int max_size = Packet.MAX_LEN - Packet.MAX_LEN;
+        int bodyLen = bodyBytes.length;
+        int max_size = Packet.MAX_LEN - Packet.MIN_LEN;
 
         ArrayList<String> arr = new ArrayList<>();
 
-        int i = 1;
+        int i = 0;
         ByteArrayOutputStream byteArr = new ByteArrayOutputStream(max_size);
 
-        while (bodyLen-- >= 0) {
-            byteArr.write(bodyBytes[bodyLen]);
-            if (i++ > max_size) {
-                i = 1;
+        for (int j=0;j<bodyLen;j++) {
+
+            if (++i > max_size) {
+                i = 0;
                 String s = new String(byteArr.toByteArray(), UTF_8);
                 arr.add(s);
-                s = "";
                 byteArr.reset();
             }
+            byteArr.write(bodyBytes[j]);
+        }
+        if (i > 0) {
+            arr.add(new String(byteArr.toByteArray(), UTF_8));
         }
         return arr;
     }

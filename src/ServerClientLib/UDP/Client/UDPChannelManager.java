@@ -45,6 +45,7 @@ public class UDPChannelManager {
         SocketAddress router = channel.receive(buf);
         buf.flip();
         Packet resp = Packet.fromBuffer(buf);
+        buf.flip();
         System.out.println("Packet: " + resp);
         System.out.println("Router: " + router);
         String payload = new String(resp.getPayload(), StandardCharsets.UTF_8);
@@ -58,7 +59,7 @@ public class UDPChannelManager {
 
      void sendMsg(String msg) throws IOException {
         Packet p = new Packet.Builder()
-                .setType(0)
+                .setType(2)
                 .setSequenceNumber(1L)
                 .setPortNumber(serverAddress.getPort())
                 .setPeerAddress(serverAddress.getAddress())

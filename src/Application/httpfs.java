@@ -1,6 +1,7 @@
 package Application;
 
 import ServerClientLib.TCP.Server.TCPServer;
+import ServerClientLib.UDP.Server.UDPServer;
 import ServerClientLib.dao.Message;
 import ServerClientLib.Server;
 
@@ -27,8 +28,10 @@ public class httpfs {
     }
 
     private static void initiateServer() throws IOException {
-        Server server = new TCPServer(PORT, ROOT, VERBOSE);
+//        Server server = new TCPServer(PORT, ROOT, VERBOSE);
+        Server server=new UDPServer(PORT,ROOT,VERBOSE);
         startReadingClientRequests(server);
+
     }
 
     private static void startReadingClientRequests(Server server) throws IOException {

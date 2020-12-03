@@ -68,15 +68,17 @@ public class UDPServer implements Server {
         InetAddress clientAddr=packet.getPeerAddress();
         Integer port= packet.getPeerPort();
         DatagramSocket ds=new DatagramSocket(port,clientAddr);
+        UDPClientThread clientThread;
         if(!clientThreads.containsKey(ds)){
-            UDPClientThread clientThread=new UDPClientThread(channel,router,outbox,VERBOSE);
+             clientThread=new UDPClientThread(channel,router,outbox,VERBOSE);
             clientThread.start();
             clientThreads.put(ds,clientThread);
         }
         else{
-            UDPClientThread clientThread=clientThreads.get(ds);
-            clientThread.addNewPacket(packet);
+             clientThread=clientThreads.get(ds);
+
         }
+        clientThread.addNewPacket(packet);
     }
 
     @Override

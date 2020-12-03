@@ -53,12 +53,12 @@ public class UDPClient implements Client {
         String hostName = url.getHost();
         int index = (url.toString().indexOf(hostName)) + hostName.length();
         String path = url.toString().substring(index);
-        msg.concat("POST " + path + " HTTP/1.0\r\n");
-        msg.concat("Host: " + hostName + "\r\n");
+        msg+=("POST " + path + " HTTP/1.0\r\n");
+        msg+=("Host: " + hostName + "\r\n");
         if (cmd.isH()) {
             HashMap<String, String> headerInfo = cmd.gethArg();
             for (String temp : headerInfo.keySet()) {
-                msg.concat(temp + ": " + headerInfo.get(temp) + "\r\n");
+                msg+=(temp + ": " + headerInfo.get(temp) + "\r\n");
             }
         }
 
@@ -66,14 +66,14 @@ public class UDPClient implements Client {
             String arg = cmd.isD() ? cmd.getdArg() : cmd.getfArg();
             if (arg.startsWith("'") || arg.startsWith("\"")) {
                 arg = arg.substring(1, arg.length() - 1);
-                msg.concat("Content-Length: " + arg.length() + "\r\n");
-                msg.concat("\r\n");
-                msg.concat(arg + "\r\n");
+                msg+=("Content-Length: " + arg.length() + "\r\n");
+                msg+=("\r\n");
+                msg+=(arg + "\r\n");
             } else {
-                msg.concat(arg + "\r\n");
+                msg+=(arg + "\r\n");
             }
         } else {
-            msg.concat("\r\n");
+            msg+=("\r\n");
         }
         return msg;
     }
@@ -83,21 +83,21 @@ public class UDPClient implements Client {
         String hostName = url.getHost();
         int index = (url.toString().indexOf(hostName)) + hostName.length();
         String path = url.toString().substring(index);
-        msg.concat("GET " + path + " HTTP/1.0\r\n");
-        msg.concat("Host: " + hostName + "\r\n");
+         msg+=("GET " + path + " HTTP/1.0\r\n");
+        msg+=("Host: " + hostName + "\r\n");
         if (cmd.isH()) {
             HashMap<String, String> headerInfo = cmd.gethArg();
             for (String temp : headerInfo.keySet()) {
-                msg.concat(temp + ": " + headerInfo.get(temp) + "\r\n");
+                msg+=(temp + ": " + headerInfo.get(temp) + "\r\n");
             }
         }
-        msg.concat("\r\n");
+        msg+=("\r\n");
         return msg;
     }
 
     private String decorateReply(Command cmd, String reply) {
         if (cmd.isV()) {
-            return reply.substring(0, reply.length() - 1);
+            return reply;
         } else {
             String[] splitReply = reply.split("\r\n\r\n", 2);
             if (splitReply.length == 1) {
