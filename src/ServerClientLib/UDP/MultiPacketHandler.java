@@ -56,7 +56,7 @@ public class MultiPacketHandler {
     public ArrayList<String> generatePayloads(String body) {
         byte[] bodyBytes = body.getBytes();
         int bodyLen = bodyBytes.length;
-        int max_size = Packet.MAX_LEN - Packet.MIN_LEN;
+        int max_size =Packet.MAX_LEN - Packet.MIN_LEN;
 
         ArrayList<String> arr = new ArrayList<>();
 
