@@ -1,6 +1,7 @@
 package ServerClientLib.UDP.Client;
 
 import ServerClientLib.Client;
+import ServerClientLib.UDP.MultiPacketHandler;
 import ServerClientLib.dao.Command;
 
 import java.io.IOException;
@@ -16,7 +17,7 @@ public class UDPClient implements Client {
     URL url;
 
     @Override
-    public String getOutput(Command cmd) throws IOException {
+    public String getOutput(Command cmd) throws IOException, InterruptedException {
         String reply = "";
         this.cmd = cmd;
 
@@ -28,9 +29,10 @@ public class UDPClient implements Client {
 
             UDPChannelManager channelManager = new UDPChannelManager(routerAddress, serverAddress);
             channelManager.openChannel();
-//check if hndshk complete
+            //check if hndshk complete
             sendMsg(cmd, channelManager);
-//check if fin-ack =true
+
+            //check if fin-ack =true
             reply = channelManager.getReply();
 
         } while (++cycle <= redirectCycles && isRedirectResponse(reply));

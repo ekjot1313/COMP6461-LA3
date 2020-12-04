@@ -1,6 +1,7 @@
 package ServerClientLib.UDP.Server;
 
 import ServerClientLib.Server;
+import ServerClientLib.UDP.MultiPacketHandler;
 import ServerClientLib.dao.Message;
 import ServerClientLib.UDP.Packet;
 
@@ -23,6 +24,7 @@ public class UDPServer implements Server {
 
     private BlockingQueue<Message> outbox = new LinkedBlockingQueue<>();
     private HashMap<DatagramSocket, UDPClientThread> clientThreads=new HashMap<>();
+    private MultiPacketHandler pktHandler = new MultiPacketHandler();
 
     public UDPServer(int port, String root, boolean verbose) {
         PORT = port;
@@ -63,7 +65,7 @@ public class UDPServer implements Server {
         }
     }
 
-    private void handlePacket(Packet packet, DatagramChannel channel, SocketAddress router) {
+    private void handlePacket(Packet packet, DatagramChannel channel, SocketAddress router) throws IOException {
 
         InetAddress clientAddr=packet.getPeerAddress();
         Integer port= packet.getPeerPort();
@@ -79,6 +81,20 @@ public class UDPServer implements Server {
 
         }
         clientThread.addNewPacket(packet);
+
+        if(!pktHandler.isAllSynPacketsReceived()) {
+            ByteBuffer buf = ByteBuffer
+                    .allocate(Packet.MAX_LEN)
+                    .order(ByteOrder.BIG_ENDIAN);
+
+            buf.clear();
+            channel.receive(buf);
+            buf.flip();
+            Packet ack = Packet.fromBuffer(buf);
+            buf.flip();
+            clientThread.addNewPacket(ack);
+        }
+
     }
 
     @Override

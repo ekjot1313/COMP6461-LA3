@@ -6,7 +6,7 @@ import java.io.IOException;
 import java.util.Scanner;
 
 public class httpc {
-    public static void main(String[] args) throws IOException {
+    public static void main(String[] args) throws IOException, InterruptedException {
 
         String input=readCommand();
 

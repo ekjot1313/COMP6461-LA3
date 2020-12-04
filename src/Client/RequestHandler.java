@@ -10,7 +10,7 @@ import java.io.IOException;
 
 public class RequestHandler {
 
-     static void handle(Command cmd) throws IOException {
+     static void handle(Command cmd) throws IOException, InterruptedException {
         if (cmd.checkValidity()) {
 
 //          Client client = new HTTPClient();

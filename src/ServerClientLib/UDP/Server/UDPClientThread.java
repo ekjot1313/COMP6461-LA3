@@ -8,6 +8,8 @@ import ServerClientLib.dao.Reply;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.SocketAddress;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.nio.channels.DatagramChannel;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
@@ -63,8 +65,6 @@ public class UDPClientThread extends Thread {
                 break;
             }
         }
-
-
     }
 
     private void handleInput(String body) throws IOException {
@@ -157,12 +157,12 @@ public class UDPClientThread extends Thread {
     }
 
 
-    public void addNewPacket(Packet packet) {
-        if (VERBOSE)
-            System.out.println("Got a new packet from " + clientAddr);
+    public void addNewPacket(Packet packet) throws IOException {
         clientAddr = packet.getPeerAddress();
         clientPort = packet.getPeerPort();
+        if (VERBOSE)
+            System.out.println("Got a new packet from " + clientAddr + " and type is " + packet.getType());
 
-        pktHandler.addNewPacket(packet);
+        pktHandler.addNewPacket(packet, channel, routerAddr);
     }
 }

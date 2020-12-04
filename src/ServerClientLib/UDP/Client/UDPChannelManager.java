@@ -24,6 +24,7 @@ public class UDPChannelManager {
     private final byte FIRST_PACKET = 0;
     private final byte MID_PACKET = 1;
     private final byte LAST_PACKET = 2;
+    long seqNo = 0L;
 
     private MultiPacketHandler pktHandler = new MultiPacketHandler();
 
@@ -33,7 +34,6 @@ public class UDPChannelManager {
     }
 
     String getReply() throws IOException {
-
         //receive packets until last packet
         while (!pktHandler.allPacketsReceived()) {
             Set<SelectionKey> keys = timeoutFunc();
@@ -42,7 +42,7 @@ public class UDPChannelManager {
 
             //if a packet is received
             Packet p = receivePacket();
-            pktHandler.addNewPacket(p);
+            pktHandler.addNewPacket(p, channel, routerAddress);
 
         }
         return pktHandler.mergeAllPackets();
@@ -77,27 +77,42 @@ public class UDPChannelManager {
 
     void openChannel() throws IOException {
         channel = DatagramChannel.open();
+        Packet syn = pktHandler.handShake(serverAddress.getAddress(), serverAddress.getPort());
+        seqNo = syn.getSequenceNumber();
+        seqNo = seqNo++;
+        sendSyn(syn);
+        getSynReply();
+    }
+
+    private void getSynReply() throws IOException {
+            Packet p = receivePacket();
+            pktHandler.addNewPacket(p, channel, routerAddress);
     }
 
     void sendMsg(String body) throws IOException {
 
         ArrayList<String> payloads = pktHandler.generatePayloads(body);
-        long seqNum = 1L;
 
         for (int i = 0; i < payloads.size(); i++) {
             String payload = payloads.get(i);
 
             Packet p = new Packet.Builder()
-                    .setType((i < payloads.size() - 1) ? 0 : 2)
-                    .setSequenceNumber(seqNum++)
+                    .setType(Packet.DATA)
+                    .setSequenceNumber(seqNo++)
                     .setPortNumber(serverAddress.getPort())
                     .setPeerAddress(serverAddress.getAddress())
                     .setPayload(payload.getBytes())
                     .create();
             channel.send(p.toBuffer(), routerAddress);
-            System.out.println("Request Packet #" + seqNum + " sent to " + routerAddress);
+            System.out.println("Request Packet #" + seqNo + " sent to " + routerAddress);
         }
 
-        //send fin pkt
+        //Packet fin = pktHandler.finPacket(serverAddress.getAddress(), serverAddress.getPort());
+        //channel.send(fin.toBuffer(), routerAddress);
+    }
+
+
+    public void sendSyn(Packet syn) throws IOException {
+        channel.send(syn.toBuffer(), routerAddress);
     }
 }
