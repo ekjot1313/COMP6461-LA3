@@ -28,9 +28,9 @@ public class UDPClient implements Client {
 
             UDPChannelManager channelManager = new UDPChannelManager(routerAddress, serverAddress);
             channelManager.openChannel();
-
+//check if hndshk complete
             sendMsg(cmd, channelManager);
-
+//check if fin-ack =true
             reply = channelManager.getReply();
 
         } while (++cycle <= redirectCycles && isRedirectResponse(reply));

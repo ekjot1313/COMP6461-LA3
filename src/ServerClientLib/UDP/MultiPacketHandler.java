@@ -8,12 +8,22 @@ import java.util.HashMap;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 public class MultiPacketHandler {
-    private final byte FIRST_PACKET = 0;
-    private final byte MID_PACKET = 1;
-    private final byte LAST_PACKET = 2;
 
     private boolean allPacketsReceived = false;
     private HashMap<Long, byte[]> payloads = new HashMap<>();
+
+
+    /**handshake(server addr, port)
+     * save dest addr, port
+     * gen my-seq
+     * send packet->syn, dest addr,port, my seq to channel, router
+    */
+
+
+    /**fin()
+     * myFin=true
+     * send pktFin->seq=mySeq+, dest addr to channel router
+     */
 
     public void addNewPacket(Packet packet) {
         int type = packet.getType();
@@ -22,14 +32,37 @@ public class MultiPacketHandler {
 
 
         switch (type) {
-            case FIRST_PACKET: {
+            case Packet.DATA: {
                 break;
             }
-            case MID_PACKET: {
+            case Packet.DATA_ACK: {
                 break;
             }
-            case LAST_PACKET: {
+            case Packet.SYN: {
+                //extract dest address, port, other seq
+                //genSyn-Ack()->send packet>syn-ack,dest addr,my-seq
+                break;
+            }
+            case Packet.SYN_ACK: {
+                //extract other-seq
+                //genAck()->send pkt>seq=my-seq+1, dest addr
+                //handhsak complete
+                break;
+            }
+            case Packet.ACK: {
+                //handshak complete
+                break;
+            }
+            case Packet.FIN: {
                 allPacketsReceived = true;
+                //genFin-Ack()->gen pkt>fin-ack,seq=my-seq+1,dest addr,
+                //destFin=true
+                //close if myFin=true
+                break;
+            }
+            case Packet.FIN_ACK: {
+                //set fin-ack=true
+
                 break;
             }
             default: {

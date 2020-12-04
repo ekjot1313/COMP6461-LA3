@@ -97,5 +97,7 @@ public class UDPChannelManager {
             channel.send(p.toBuffer(), routerAddress);
             System.out.println("Request Packet #" + seqNum + " sent to " + routerAddress);
         }
+
+        //send fin pkt
     }
 }

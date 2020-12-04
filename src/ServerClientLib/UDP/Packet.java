@@ -21,6 +21,14 @@ public class Packet {
     private final int peerPort;
     private final byte[] payload;
 
+    public static final int DATA=0;
+    public static final int SYN=1;
+    public static final int SYN_ACK=2;
+    public static final int ACK=3;
+    public static final int FIN=4;
+    public static final int FIN_ACK=5;
+    public static final int DATA_ACK=6;
+
 
     public Packet(int type, long sequenceNumber, InetAddress peerAddress, int peerPort, byte[] payload) {
         this.type = type;
