@@ -21,7 +21,6 @@ public class RequestHandler {
 
         String cmd = extractCommand(request);
         String data = extractData(request);
-
         int type = getTypeOfCmd(cmd);
 
         return RequestExecutor.execute(cmd, data, type, dir);
@@ -38,7 +37,7 @@ public class RequestHandler {
         if (out.length() == 0)
             return "";
 
-        return out.substring(0, out.length() - 8);
+        return out.substring(0, out.length() - 9);
     }
 
     private static String extractData(String body) {

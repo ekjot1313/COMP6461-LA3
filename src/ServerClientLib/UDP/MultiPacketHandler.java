@@ -66,7 +66,7 @@ public class MultiPacketHandler {
         for (int j=0;j<bodyLen;j++) {
 
             if (++i > max_size) {
-                i = 0;
+                i = 1;
                 String s = new String(byteArr.toByteArray(), UTF_8);
                 arr.add(s);
                 byteArr.reset();

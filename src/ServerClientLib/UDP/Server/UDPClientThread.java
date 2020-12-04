@@ -1,9 +1,9 @@
 package ServerClientLib.UDP.Server;
 
-import ServerClientLib.dao.Message;
-import ServerClientLib.dao.Reply;
 import ServerClientLib.UDP.MultiPacketHandler;
 import ServerClientLib.UDP.Packet;
+import ServerClientLib.dao.Message;
+import ServerClientLib.dao.Reply;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -12,7 +12,8 @@ import java.nio.channels.DatagramChannel;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Locale;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
@@ -25,7 +26,7 @@ public class UDPClientThread extends Thread {
     private BlockingQueue<Message> outbox;
     private final boolean VERBOSE;
     private volatile static int numberOfClients = 0;
-    private MultiPacketHandler pktHandler=new MultiPacketHandler();
+    private MultiPacketHandler pktHandler = new MultiPacketHandler();
 
     InetAddress clientAddr;
     Integer clientPort;
@@ -88,20 +89,21 @@ public class UDPClientThread extends Thread {
     }
 
     private void handleOutput(String body) throws IOException {
-        ArrayList<String> payloads=pktHandler.generatePayloads(body);
-        long seqNum=1L;
+        ArrayList<String> payloads = pktHandler.generatePayloads(body);
+        long seqNum = 1L;
+        for (int i = 0; i < payloads.size(); i++) {
+            String payload = payloads.get(i);
 
-       for(String payload:payloads){
-           Packet p = new Packet.Builder()
-                   .setType(0)
-                   .setSequenceNumber(seqNum++)
-                   .setPortNumber(clientPort)
-                   .setPeerAddress(clientAddr)
-                   .setPayload(payload.getBytes())
-                   .create();
-           channel.send(p.toBuffer(), routerAddr);
-           System.out.println("Reply Packet #"+seqNum+" sent to "+routerAddr);
-       }
+            Packet p = new Packet.Builder()
+                    .setType((i <payloads.size() - 1) ? 0 : 2)
+                    .setSequenceNumber(seqNum++)
+                    .setPortNumber(clientPort)
+                    .setPeerAddress(clientAddr)
+                    .setPayload(payload.getBytes())
+                    .create();
+            channel.send(p.toBuffer(), routerAddr);
+            System.out.println("Reply Packet #" + (seqNum-1) + " sent to " + routerAddr);
+        }
 
     }
 
@@ -116,7 +118,8 @@ public class UDPClientThread extends Thread {
             head += "Date: " + formatter.format(ZonedDateTime.now(ZoneOffset.UTC)) + "\r\n";
             body = "Internal Server Error";
         } else if (reply.getStatus() == 404) {
-            head += "HTTP/1.1 404 Not Found\r\n";
+            head += "HTTP/1." +
+                    "1 404 Not Found\r\n";
             head += "Date: " + formatter.format(ZonedDateTime.now(ZoneOffset.UTC)) + "\r\n";
             body = "File not present in the current directory";
         } else if (reply.getStatus() == 400) {
