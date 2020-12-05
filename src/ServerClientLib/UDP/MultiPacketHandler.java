@@ -151,7 +151,7 @@ public class MultiPacketHandler {
 
     private void sendFinAckPacket() throws IOException {
 
-        System.out.println("Sending FIN-ACK Pack");
+        //System.out.println("Sending FIN-ACK Pack");
         FinAckPacket = new Packet.Builder()
                 .setType(Packet.FIN_ACK)
                 .setPeerAddress(destAddress)
@@ -216,19 +216,16 @@ public class MultiPacketHandler {
             sentPackets.get(seq).setACKed(true);
         }
 
-        System.out.println("checking if all acked");
-        while (true) {
-            int flag = 0;
-            for (Packet p : sentPackets.values()) {
-                if (!p.isACKed()) {
-                    flag = 1;
-                }
-            }
+        //System.out.println("Checking if all packets are Acked");
 
-            if (flag == 0) {
-                allPacketACKed = true;
-                break;
+        int flag = 0;
+        for (Packet p : sentPackets.values()) {
+            if (!p.isACKed()) {
+                flag = 1;
             }
+        }
+        if (flag == 0) {
+            allPacketACKed = true;
         }
     }
 
@@ -302,8 +299,8 @@ public class MultiPacketHandler {
         buf.flip();
         Packet resp = Packet.fromBuffer(buf);
         buf.flip();
-        System.out.println("Packet: " + resp);
-        System.out.println("Router: " + router);
+        //System.out.println("Packet: " + resp);
+        //System.out.println("Router: " + router);
         return resp;
     }
 
@@ -338,7 +335,7 @@ public class MultiPacketHandler {
         channel.configureBlocking(false);
         Selector selector = Selector.open();
         channel.register(selector, OP_READ);
-        System.out.println("Waiting for the response");
+        //System.out.println("Waiting for the response");
         selector.select(TIMEOUT);
 
         Set<SelectionKey> keys = selector.selectedKeys();
@@ -355,14 +352,14 @@ public class MultiPacketHandler {
             if (HAND_SHAKE_COMPLETE)
                 break;
         }
-        System.out.println("Generating packets to send.");
+        //System.out.println("Generating packets to send.");
         ArrayList<String> payloads = generatePayloads(data);
 
         for (int i = 0; i < payloads.size(); i++) {
             String payload = payloads.get(i);
             sendDATAPacket(payload);
 
-            System.out.println("Request Packet #" + (mySeqNo - 1) + " sent to " + routerAddress);
+            //System.out.println("Request Packet #" + (mySeqNo - 1) + " sent to " + routerAddress);
         }
         while (true) {
             Thread.sleep(1000);

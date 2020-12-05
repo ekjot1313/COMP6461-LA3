@@ -52,12 +52,12 @@ public class UDPServer implements Server {
     private void startReceiver(DatagramChannel channel, ByteBuffer buf) throws IOException {
         while (true) {
             buf.clear();
-            if (VERBOSE)
-                System.out.println("Waiting for a packet...");
+            //if (VERBOSE)
+                //System.out.println("Waiting for a packet...");
 
             SocketAddress router = channel.receive(buf);
 
-            System.out.println("Received a packet...");
+            //System.out.println("Received a packet...");
             // Parse a packet from the received raw data.
             buf.flip();
             Packet packet = Packet.fromBuffer(buf);

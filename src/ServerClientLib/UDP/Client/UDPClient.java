@@ -36,10 +36,8 @@ public class UDPClient implements Client {
             handleRedirection(cmd, reply);
 
             openChannel();
-//            (new Scanner(System.in)).nextLine();
-            System.out.println("Channel Opened.");
+            //System.out.println("Channel Opened.");
             sendRequest(cmd);
-            //check if fin-ack =true
             reply = getReply();
 
         } while (++cycle <= redirectCycles && isRedirectResponse(reply));
@@ -48,7 +46,7 @@ public class UDPClient implements Client {
     }
 
     private void sendRequest(Command cmd) throws IOException, InterruptedException {
-        System.out.println("Generating request to send.");
+        //System.out.println("Generating request to send.");
         String request = "";
         if (cmd.isGet()) {
             request = generateGetRequest(cmd);
@@ -151,7 +149,7 @@ public class UDPClient implements Client {
     }
 
     String getReply() throws IOException, InterruptedException {
-        System.out.println("Waiting for reply packets from server...");
+        //System.out.println("Waiting for reply packets from server...");
         //receive packets until last packet
         while (true) {
             Thread.sleep(1000);

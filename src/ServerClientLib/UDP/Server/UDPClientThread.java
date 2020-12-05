@@ -52,10 +52,11 @@ public class UDPClientThread extends Thread {
     public void run() {
         try {
             //we are not starting packetHandler receiver because server has its own receiver
-            while (!pktHandler.COMMUNICATION_COMPLETE) {
+            while (true) {
                 Thread.sleep(1000);
                 if (pktHandler.allPacketsReceived()) {
-                    System.out.println("Starting to create a reply.");
+                    if(VERBOSE)
+                        System.out.println("Starting to create a reply.");
                     String request = pktHandler.mergeAllPackets();
                     handleRequest(request);
                     break;
