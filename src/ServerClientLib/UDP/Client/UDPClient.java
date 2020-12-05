@@ -37,8 +37,8 @@ public class UDPClient implements Client {
             handleRedirection(cmd, reply);
 
             openChannel();
-            (new Scanner(System.in)).nextLine();
-
+//            (new Scanner(System.in)).nextLine();
+            System.out.println("Channel Opened.");
             sendRequest(cmd);
             //check if fin-ack =true
             reply = getReply();
@@ -49,6 +49,7 @@ public class UDPClient implements Client {
     }
 
     private void sendRequest(Command cmd) throws IOException {
+        System.out.println("Generating request to send.");
         String request = "";
         if (cmd.isGet()) {
             request = generateGetRequest(cmd);

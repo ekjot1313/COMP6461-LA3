@@ -33,9 +33,10 @@ public class MultiPacketHandler {
     private boolean allPacketsReceived = false;
     private final int TIMEOUT = 5000;
     private boolean COMMUNICATION_COMPLETE = false;
+    private boolean allPacketACKed = false;
 
     private HashMap<Long, byte[]> payloads = new HashMap<>();
-    private HashMap<Long,Packet> sentPackets=new HashMap<>();
+    private HashMap<Long, Packet> sentPackets = new HashMap<>();
 
     private Packet SYNPacket;
     private Packet SynAckPacket;
@@ -54,7 +55,7 @@ public class MultiPacketHandler {
     }
 
     private void sendSYNPacket() throws IOException {
-        SYNPacket= new Packet.Builder()
+        SYNPacket = new Packet.Builder()
                 .setType(Packet.SYN)
                 .setPeerAddress(destAddress)
                 .setPortNumber(destPort)
@@ -74,8 +75,8 @@ public class MultiPacketHandler {
                 try {
                     do {
                         channel.send(packet.toBuffer(), routerAddress);
-                        if(!sentPackets.containsKey(packet.getSequenceNumber())){
-                            sentPackets.put(packet.getSequenceNumber(),packet);
+                        if (packet.getType() == Packet.DATA && !sentPackets.containsKey(packet.getSequenceNumber())) {
+                            sentPackets.put(packet.getSequenceNumber(), packet);
                         }
                         Thread.sleep(TIMEOUT);
 
@@ -181,8 +182,7 @@ public class MultiPacketHandler {
     }
 
     private void handleSYNPacket(Packet packet) throws IOException {
-        destAddress = packet.getPeerAddress();
-        destPort = packet.getPeerPort();
+
         destSeqNo = packet.getSequenceNumber();
 
         //genSyn-Ack()->send packet>syn-ack,dest addr,my-seq
@@ -192,7 +192,7 @@ public class MultiPacketHandler {
     }
 
     private void sendSynAckPacket() throws IOException {
-         SynAckPacket = new Packet.Builder()
+        SynAckPacket = new Packet.Builder()
                 .setType(Packet.SYN_ACK)
                 .setPeerAddress(destAddress)
                 .setPortNumber(destPort)
@@ -203,6 +203,10 @@ public class MultiPacketHandler {
     }
 
     private void handleDataAckPacket(Packet packet) {
+        Long seq=packet.getSequenceNumber();
+        if(sentPackets.containsKey(seq)){
+            sentPackets.get(seq).setACKed(true);
+        }
     }
 
     private void handleDataPacket(Packet packet) throws IOException {
@@ -323,7 +327,7 @@ public class MultiPacketHandler {
         while (true)
             if (HAND_SHAKE_COMPLETE)
                 break;
-
+        System.out.println("Generating packets to send.");
         ArrayList<String> payloads = generatePayloads(data);
 
         for (int i = 0; i < payloads.size(); i++) {
@@ -332,7 +336,9 @@ public class MultiPacketHandler {
 
             System.out.println("Request Packet #" + (mySeqNo - 1) + " sent to " + routerAddress);
         }
-        sendFINPacket();
+        while (true)
+            if (allPacketACKed)
+                sendFINPacket();
     }
 
     private void sendFINPacket() throws IOException {
