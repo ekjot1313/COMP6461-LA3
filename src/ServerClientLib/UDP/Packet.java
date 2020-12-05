@@ -1,10 +1,16 @@
 package ServerClientLib.UDP;
 
+import Application.RequestHandler;
+import ServerClientLib.dao.Message;
+
 import java.io.IOException;
 import java.net.Inet4Address;
 import java.net.InetAddress;
+import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.nio.channels.DatagramChannel;
+import java.util.concurrent.BlockingQueue;
 
 /**
  * Packet represents a simulated network packet.
@@ -20,6 +26,10 @@ public class Packet {
     private final InetAddress peerAddress;
     private final int peerPort;
     private final byte[] payload;
+
+    private boolean ACKed=false;
+
+
 
     public static final int DATA=0;
     public static final int SYN=1;
@@ -143,6 +153,7 @@ public class Packet {
         return String.format("#%d peer=%s:%d, size=%d", sequenceNumber, peerAddress, peerPort, payload.length);
     }
 
+
     public static class Builder {
         private int type;
         private long sequenceNumber;
@@ -175,8 +186,17 @@ public class Packet {
             return this;
         }
 
+
         public Packet create() {
             return new Packet(type, sequenceNumber, peerAddress, portNumber, payload);
         }
     }
+    public boolean isACKed() {
+        return ACKed;
+    }
+
+    public void setACKed(boolean ACKed) {
+        this.ACKed = ACKed;
+    }
+
 }

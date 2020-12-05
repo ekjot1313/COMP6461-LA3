@@ -7,14 +7,12 @@ import ServerClientLib.dao.Reply;
 
 import java.io.IOException;
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.net.SocketAddress;
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 import java.nio.channels.DatagramChannel;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
 import java.util.Locale;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -28,19 +26,23 @@ public class UDPClientThread extends Thread {
     private BlockingQueue<Message> outbox;
     private final boolean VERBOSE;
     private volatile static int numberOfClients = 0;
-    private MultiPacketHandler pktHandler = new MultiPacketHandler();
+    private MultiPacketHandler pktHandler;
 
-    InetAddress clientAddr;
-    Integer clientPort;
+    private InetSocketAddress clientAddress;
+    private int clientPort;
 
-    UDPClientThread(DatagramChannel channel, SocketAddress routerAddr, BlockingQueue<Message> outbox, boolean VERBOSE) {
+    UDPClientThread(DatagramChannel channel, SocketAddress routerAddr, InetSocketAddress clientAddress, BlockingQueue<Message> outbox, boolean VERBOSE) {
         this.channel = channel;
         this.routerAddr = routerAddr;
+        this.clientAddress = clientAddress;
         this.outbox = outbox;
         this.VERBOSE = VERBOSE;
         numberOfClients++;
+
+        pktHandler = new MultiPacketHandler(channel, routerAddr, clientAddress);
+
         if (VERBOSE) {
-            System.out.println("Client connected: " + clientAddr);
+            System.out.println("Client connected: " + clientAddress);
             System.out.println("Total clients: " + numberOfClients);
         }
 
@@ -49,62 +51,42 @@ public class UDPClientThread extends Thread {
     @Override
     public void run() {
         try {
-            handleClient();
+            //we are not starting packetHandler receiver because server has its own receiver
+            while (true) {
+                if (pktHandler.allPacketsReceived()) {
+                    String request = pktHandler.mergeAllPackets();
+                    handleRequest(request);
+                    break;
+                }
+            }
         } catch (IOException e) {
             e.printStackTrace();
-        } catch (InterruptedException e) {
-            e.printStackTrace();
         }
     }
 
-    private void handleClient() throws IOException, InterruptedException {
-        while (true) {
-            if (pktHandler.allPacketsReceived()) {
-                String body = pktHandler.mergeAllPackets();
-                handleInput(body);
-                break;
-            }
-        }
-    }
 
-    private void handleInput(String body) throws IOException {
-        Message msg = new Message(body, inbox);
+    private void handleRequest(String request) throws IOException {
+        Message msg = new Message(request, inbox);
         outbox.add(msg);
         requestMade = true;
         while (requestMade) {
             if (!inbox.isEmpty()) {
                 Reply reply = inbox.poll();
-                handleOutput(formatOutput(reply));
+
+                String replyFromApp = formatOutput(reply);
+                pktHandler.sendData(replyFromApp);
+
                 requestMade = false;
                 if (VERBOSE)
-                    System.out.println("Reply sent to " + clientAddr);
+                    System.out.println("Reply sent to " + clientAddress);
             }
         }
         numberOfClients--;
 
         if (VERBOSE) {
-            System.out.println("Client disconnected: " + clientAddr);
+            System.out.println("Client disconnected: " + clientAddress);
             System.out.println("Total clients: " + numberOfClients);
         }
-    }
-
-    private void handleOutput(String body) throws IOException {
-        ArrayList<String> payloads = pktHandler.generatePayloads(body);
-        long seqNum = 1L;
-        for (int i = 0; i < payloads.size(); i++) {
-            String payload = payloads.get(i);
-
-            Packet p = new Packet.Builder()
-                    .setType((i <payloads.size() - 1) ? 0 : 2)
-                    .setSequenceNumber(seqNum++)
-                    .setPortNumber(clientPort)
-                    .setPeerAddress(clientAddr)
-                    .setPayload(payload.getBytes())
-                    .create();
-            channel.send(p.toBuffer(), routerAddr);
-            System.out.println("Reply Packet #" + (seqNum-1) + " sent to " + routerAddr);
-        }
-
     }
 
 
@@ -158,11 +140,6 @@ public class UDPClientThread extends Thread {
 
 
     public void addNewPacket(Packet packet) throws IOException {
-        clientAddr = packet.getPeerAddress();
-        clientPort = packet.getPeerPort();
-        if (VERBOSE)
-            System.out.println("Got a new packet from " + clientAddr + " and type is " + packet.getType());
-
-        pktHandler.addNewPacket(packet, channel, routerAddr);
+        pktHandler.addNewPacket(packet);
     }
 }

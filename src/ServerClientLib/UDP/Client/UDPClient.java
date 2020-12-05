@@ -5,16 +5,24 @@ import ServerClientLib.UDP.MultiPacketHandler;
 import ServerClientLib.dao.Command;
 
 import java.io.IOException;
-import java.net.*;
+import java.net.InetSocketAddress;
+import java.net.MalformedURLException;
+import java.net.SocketAddress;
+import java.net.URL;
+import java.nio.channels.DatagramChannel;
 import java.util.HashMap;
 
 public class UDPClient implements Client {
     private Command cmd;
     final private int redirectCycles = 3;
 
-    SocketAddress routerAddress;
-    InetSocketAddress serverAddress;
-    URL url;
+    private SocketAddress routerAddress;
+    private InetSocketAddress serverAddress;
+    private URL url;
+    private DatagramChannel channel;
+
+
+    private MultiPacketHandler pktHandler;
 
     @Override
     public String getOutput(Command cmd) throws IOException, InterruptedException {
@@ -27,40 +35,39 @@ public class UDPClient implements Client {
 
             handleRedirection(cmd, reply);
 
-            UDPChannelManager channelManager = new UDPChannelManager(routerAddress, serverAddress);
-            channelManager.openChannel();
-            //check if hndshk complete
-            sendMsg(cmd, channelManager);
-
+            openChannel();
+            sendRequest(cmd);
             //check if fin-ack =true
-            reply = channelManager.getReply();
+            reply = getReply();
 
         } while (++cycle <= redirectCycles && isRedirectResponse(reply));
 
         return decorateReply(cmd, reply);
     }
 
-    private void sendMsg(Command cmd, UDPChannelManager channelManager) throws IOException {
-        String msg = "";
+    private void sendRequest(Command cmd) throws IOException {
+        String request = "";
         if (cmd.isGet()) {
-            msg = addGetHeaders(cmd);
+            request = generateGetRequest(cmd);
         } else if (cmd.isPost()) {
-            msg = addPostHeaders(cmd);
+            request = generatePostRequest(cmd);
         }
-        channelManager.sendMsg(msg);
+
+        pktHandler.sendData(request);
+
     }
 
-    private String addPostHeaders(Command cmd) {
+    private String generatePostRequest(Command cmd) {
         String msg = "";
         String hostName = url.getHost();
         int index = (url.toString().indexOf(hostName)) + hostName.length();
         String path = url.toString().substring(index);
-        msg+=("POST " + path + " HTTP/1.0\r\n");
-        msg+=("Host: " + hostName + "\r\n");
+        msg += ("POST " + path + " HTTP/1.0\r\n");
+        msg += ("Host: " + hostName + "\r\n");
         if (cmd.isH()) {
             HashMap<String, String> headerInfo = cmd.gethArg();
             for (String temp : headerInfo.keySet()) {
-                msg+=(temp + ": " + headerInfo.get(temp) + "\r\n");
+                msg += (temp + ": " + headerInfo.get(temp) + "\r\n");
             }
         }
 
@@ -68,32 +75,32 @@ public class UDPClient implements Client {
             String arg = cmd.isD() ? cmd.getdArg() : cmd.getfArg();
             if (arg.startsWith("'") || arg.startsWith("\"")) {
                 arg = arg.substring(1, arg.length() - 1);
-                msg+=("Content-Length: " + arg.length() + "\r\n");
-                msg+=("\r\n");
-                msg+=(arg + "\r\n");
+                msg += ("Content-Length: " + arg.length() + "\r\n");
+                msg += ("\r\n");
+                msg += (arg + "\r\n");
             } else {
-                msg+=(arg + "\r\n");
+                msg += (arg + "\r\n");
             }
         } else {
-            msg+=("\r\n");
+            msg += ("\r\n");
         }
         return msg;
     }
 
-    private String addGetHeaders(Command cmd) throws IOException {
+    private String generateGetRequest(Command cmd) throws IOException {
         String msg = "";
         String hostName = url.getHost();
         int index = (url.toString().indexOf(hostName)) + hostName.length();
         String path = url.toString().substring(index);
-         msg+=("GET " + path + " HTTP/1.0\r\n");
-        msg+=("Host: " + hostName + "\r\n");
+        msg += ("GET " + path + " HTTP/1.0\r\n");
+        msg += ("Host: " + hostName + "\r\n");
         if (cmd.isH()) {
             HashMap<String, String> headerInfo = cmd.gethArg();
             for (String temp : headerInfo.keySet()) {
-                msg+=(temp + ": " + headerInfo.get(temp) + "\r\n");
+                msg += (temp + ": " + headerInfo.get(temp) + "\r\n");
             }
         }
-        msg+=("\r\n");
+        msg += ("\r\n");
         return msg;
     }
 
@@ -140,4 +147,21 @@ public class UDPClient implements Client {
         return false;
     }
 
+    String getReply() throws IOException {
+        System.out.println("Waiting for reply packets from server...");
+        //receive packets until last packet
+        while (true) {
+            if (pktHandler.allPacketsReceived())
+                return pktHandler.getMsg();
+        }
+    }
+
+    void openChannel() throws IOException {
+        channel = DatagramChannel.open();
+
+        pktHandler = new MultiPacketHandler(channel, routerAddress, serverAddress);
+        pktHandler.startReceiver();
+        pktHandler.handShake();
+
+    }
 }
