@@ -11,6 +11,7 @@ import java.net.SocketAddress;
 import java.net.URL;
 import java.nio.channels.DatagramChannel;
 import java.util.HashMap;
+import java.util.Scanner;
 
 public class UDPClient implements Client {
     private Command cmd;
@@ -36,6 +37,8 @@ public class UDPClient implements Client {
             handleRedirection(cmd, reply);
 
             openChannel();
+            (new Scanner(System.in)).nextLine();
+
             sendRequest(cmd);
             //check if fin-ack =true
             reply = getReply();

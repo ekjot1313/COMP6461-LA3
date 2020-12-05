@@ -29,13 +29,17 @@ public class MultiPacketHandler {
     private long destSeqNo = 0L;
     private boolean myFin = false;
     private boolean destFin = false;
-    private boolean HAND_SHAKE_INITIATED = false;
     private boolean HAND_SHAKE_COMPLETE = false;
     private boolean allPacketsReceived = false;
     private final int TIMEOUT = 5000;
     private boolean COMMUNICATION_COMPLETE = false;
 
     private HashMap<Long, byte[]> payloads = new HashMap<>();
+    private HashMap<Long,Packet> sentPackets=new HashMap<>();
+
+    private Packet SYNPacket;
+    private Packet SynAckPacket;
+    private Packet ACKPacket;
 
     public MultiPacketHandler(DatagramChannel channel, SocketAddress routerAddress, InetSocketAddress destAddress) {
         this.channel = channel;
@@ -47,11 +51,10 @@ public class MultiPacketHandler {
     public void handShake() throws IOException {
         mySeqNo = 1L;
         sendSYNPacket();
-        HAND_SHAKE_INITIATED = true;
     }
 
     private void sendSYNPacket() throws IOException {
-        Packet syn = new Packet.Builder()
+        SYNPacket= new Packet.Builder()
                 .setType(Packet.SYN)
                 .setPeerAddress(destAddress)
                 .setPortNumber(destPort)
@@ -59,7 +62,7 @@ public class MultiPacketHandler {
                 .setPayload(new byte[0])
                 .create();
 
-        sendAPacket(syn);
+        sendAPacket(SYNPacket);
     }
 
     //start a new infinite thread and send it after every timeout until packet is acknowledged
@@ -71,6 +74,9 @@ public class MultiPacketHandler {
                 try {
                     do {
                         channel.send(packet.toBuffer(), routerAddress);
+                        if(!sentPackets.containsKey(packet.getSequenceNumber())){
+                            sentPackets.put(packet.getSequenceNumber(),packet);
+                        }
                         Thread.sleep(TIMEOUT);
 
                     } while (!packet.isACKed());
@@ -89,30 +95,37 @@ public class MultiPacketHandler {
 
         switch (packet.getType()) {
             case Packet.DATA: {
+                System.out.println("Received a DATA packet");
                 handleDataPacket(packet);
                 break;
             }
             case Packet.DATA_ACK: {
+                System.out.println("Received a DataAck packet");
                 handleDataAckPacket(packet);
                 break;
             }
             case Packet.SYN: {
+                System.out.println("Received a SYN packet");
                 handleSYNPacket(packet);
                 break;
             }
             case Packet.SYN_ACK: {
+                System.out.println("Received a SynAck packet");
                 handleSynAckPacket(packet);
                 break;
             }
             case Packet.ACK: {
+                System.out.println("Received a Ack packet");
                 handleACKPacket();
                 break;
             }
             case Packet.FIN: {
+                System.out.println("Received a FIN packet");
                 handleFINPacket(packet);
                 break;
             }
             case Packet.FIN_ACK: {
+                System.out.println("Received a FinAck packet");
                 //set fin-ack=true
                 break;
             }
@@ -142,23 +155,28 @@ public class MultiPacketHandler {
     }
 
     private void handleACKPacket() {
+        SynAckPacket.setACKed(true);
         HAND_SHAKE_COMPLETE = true;
+        System.out.println("Handshake Complete.");
     }
 
     private void handleSynAckPacket(Packet packet) throws IOException {
+        SYNPacket.setACKed(true);
         sendACKPacket();
         HAND_SHAKE_COMPLETE = true;
+        System.out.println("Handshake Complete.");
     }
 
     private void sendACKPacket() throws IOException {
-        Packet ACK = new Packet.Builder()
+        ACKPacket = new Packet.Builder()
                 .setType(Packet.ACK)
                 .setPeerAddress(destAddress)
                 .setPortNumber(destPort)
                 .setSequenceNumber(mySeqNo++)
                 .setPayload(new byte[0])
                 .create();
-        sendAPacket(ACK);
+        ACKPacket.setACKed(true);
+        sendAPacket(ACKPacket);
 
     }
 
@@ -174,20 +192,21 @@ public class MultiPacketHandler {
     }
 
     private void sendSynAckPacket() throws IOException {
-        Packet synAck = new Packet.Builder()
+         SynAckPacket = new Packet.Builder()
                 .setType(Packet.SYN_ACK)
                 .setPeerAddress(destAddress)
                 .setPortNumber(destPort)
                 .setSequenceNumber(mySeqNo)
                 .setPayload(new byte[0])
                 .create();
-        sendAPacket(synAck);
+        sendAPacket(SynAckPacket);
     }
 
     private void handleDataAckPacket(Packet packet) {
     }
 
     private void handleDataPacket(Packet packet) throws IOException {
+        SynAckPacket.setACKed(true);
         payloads.put(packet.getSequenceNumber(), packet.getPayload());
 
         sendDataAckPacket(packet.getSequenceNumber());
@@ -265,13 +284,13 @@ public class MultiPacketHandler {
                 try {
 
                     while (!COMMUNICATION_COMPLETE) {
-                            Set<SelectionKey> keys = timeoutFunc(TIMEOUT);
-                            if (keys == null) {
-                                System.out.println("No response after timeout");
-                                COMMUNICATION_COMPLETE = true;
-                                continue;
-                            }
-                            keys.clear();
+                        Set<SelectionKey> keys = timeoutFunc(TIMEOUT);
+                        if (keys == null) {
+                            System.out.println("No response after timeout");
+                            COMMUNICATION_COMPLETE = true;
+                            continue;
+                        }
+                        keys.clear();
 
                         Packet packet = receivePacket();
                         addNewPacket(packet);

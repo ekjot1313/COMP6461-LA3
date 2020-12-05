@@ -1,12 +1,10 @@
 package ServerClientLib.UDP.Server;
 
 import ServerClientLib.Server;
-import ServerClientLib.UDP.MultiPacketHandler;
-import ServerClientLib.dao.Message;
 import ServerClientLib.UDP.Packet;
+import ServerClientLib.dao.Message;
 
 import java.io.IOException;
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
@@ -23,7 +21,7 @@ public class UDPServer implements Server {
     private boolean VERBOSE;
 
     private BlockingQueue<Message> outbox = new LinkedBlockingQueue<>();
-    private HashMap<String, UDPClientThread> clientThreads=new HashMap<>();
+    private HashMap<String, UDPClientThread> clientThreads = new HashMap<>();
 
     public UDPServer(int port, String root, boolean verbose) {
         PORT = port;
@@ -72,16 +70,15 @@ public class UDPServer implements Server {
     private void handlePacket(Packet packet, DatagramChannel channel, SocketAddress router) throws IOException {
 
         UDPClientThread clientThread;
-        InetSocketAddress clientAddress=new InetSocketAddress(packet.getPeerAddress(),packet.getPeerPort());
-        String key=clientAddress.toString();
+        InetSocketAddress clientAddress = new InetSocketAddress(packet.getPeerAddress(), packet.getPeerPort());
+        String key = clientAddress.toString();
 
-        if(!clientThreads.containsKey(key)){
-            clientThread=new UDPClientThread(channel,router,clientAddress,outbox,VERBOSE);
+        if (!clientThreads.containsKey(key)) {
+            clientThread = new UDPClientThread(channel, router, clientAddress, outbox, VERBOSE);
             clientThread.start();
-            clientThreads.put(key,clientThread);
-        }
-        else{
-             clientThread=clientThreads.get(key);
+            clientThreads.put(key, clientThread);
+        } else {
+            clientThread = clientThreads.get(key);
 
         }
 
