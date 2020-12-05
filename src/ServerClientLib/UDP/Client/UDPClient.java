@@ -11,7 +11,6 @@ import java.net.SocketAddress;
 import java.net.URL;
 import java.nio.channels.DatagramChannel;
 import java.util.HashMap;
-import java.util.Scanner;
 
 public class UDPClient implements Client {
     private Command cmd;
@@ -66,12 +65,12 @@ public class UDPClient implements Client {
         String hostName = url.getHost();
         int index = (url.toString().indexOf(hostName)) + hostName.length();
         String path = url.toString().substring(index);
-        msg += ("POST " + path + " HTTP/1.0\r\n");
-        msg += ("Host: " + hostName + "\r\n");
+        msg += ("POST " + path + " HTTP/1.0\n");
+        msg += ("Host: " + hostName + "\n");
         if (cmd.isH()) {
             HashMap<String, String> headerInfo = cmd.gethArg();
             for (String temp : headerInfo.keySet()) {
-                msg += (temp + ": " + headerInfo.get(temp) + "\r\n");
+                msg += (temp + ": " + headerInfo.get(temp) + "\n");
             }
         }
 
@@ -79,14 +78,14 @@ public class UDPClient implements Client {
             String arg = cmd.isD() ? cmd.getdArg() : cmd.getfArg();
             if (arg.startsWith("'") || arg.startsWith("\"")) {
                 arg = arg.substring(1, arg.length() - 1);
-                msg += ("Content-Length: " + arg.length() + "\r\n");
-                msg += ("\r\n");
-                msg += (arg + "\r\n");
+                msg += ("Content-Length: " + arg.length() + "\n");
+                msg += ("\n");
+                msg += (arg + "\n");
             } else {
-                msg += (arg + "\r\n");
+                msg += (arg + "\n");
             }
         } else {
-            msg += ("\r\n");
+            msg += ("\n");
         }
         return msg;
     }
@@ -151,10 +150,11 @@ public class UDPClient implements Client {
         return false;
     }
 
-    String getReply() throws IOException {
+    String getReply() throws IOException, InterruptedException {
         System.out.println("Waiting for reply packets from server...");
         //receive packets until last packet
         while (true) {
+            Thread.sleep(1000);
             if (pktHandler.allPacketsReceived())
                 return pktHandler.getMsg();
         }

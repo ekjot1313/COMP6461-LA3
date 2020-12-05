@@ -32,7 +32,7 @@ public class MultiPacketHandler {
     private boolean HAND_SHAKE_COMPLETE = false;
     private boolean allPacketsReceived = false;
     private final int TIMEOUT = 5000;
-    private boolean COMMUNICATION_COMPLETE = false;
+    public boolean COMMUNICATION_COMPLETE = false;
     private boolean allPacketACKed = false;
 
     private HashMap<Long, byte[]> payloads = new HashMap<>();
@@ -41,6 +41,8 @@ public class MultiPacketHandler {
     private Packet SYNPacket;
     private Packet SynAckPacket;
     private Packet ACKPacket;
+    private Packet FINPacket;
+    private Packet FinAckPacket;
 
     public MultiPacketHandler(DatagramChannel channel, SocketAddress routerAddress, InetSocketAddress destAddress) {
         this.channel = channel;
@@ -126,6 +128,7 @@ public class MultiPacketHandler {
                 break;
             }
             case Packet.FIN_ACK: {
+                FINPacket.setACKed(true);
                 System.out.println("Received a FinAck packet");
                 //set fin-ack=true
                 break;
@@ -139,20 +142,25 @@ public class MultiPacketHandler {
 
     private void handleFINPacket(Packet packet) throws IOException {
         destFin = true;
-        sendFinAckPacket();
         allPacketsReceived = true;
+        sendFinAckPacket();
+        if(myFin){
+            COMMUNICATION_COMPLETE=true;
+        }
     }
 
     private void sendFinAckPacket() throws IOException {
-        Packet finAck = new Packet.Builder()
+
+        System.out.println("Sending FIN-ACK Pack");
+        FinAckPacket = new Packet.Builder()
                 .setType(Packet.FIN_ACK)
                 .setPeerAddress(destAddress)
                 .setPortNumber(destPort)
                 .setSequenceNumber(mySeqNo++)
                 .setPayload(new byte[0])
                 .create();
-
-        channel.send(finAck.toBuffer(), routerAddress);
+        FinAckPacket.setACKed(true);
+        channel.send(FinAckPacket.toBuffer(), routerAddress);
     }
 
     private void handleACKPacket() {
@@ -203,13 +211,13 @@ public class MultiPacketHandler {
     }
 
     private void handleDataAckPacket(Packet packet) {
-        Long seq=packet.getSequenceNumber();
-        if(sentPackets.containsKey(seq)){
+        Long seq = packet.getSequenceNumber();
+        if (sentPackets.containsKey(seq)) {
             sentPackets.get(seq).setACKed(true);
         }
 
         System.out.println("checking if all acked");
-        while(true) {
+        while (true) {
             int flag = 0;
             for (Packet p : sentPackets.values()) {
                 if (!p.isACKed()) {
@@ -217,7 +225,7 @@ public class MultiPacketHandler {
                 }
             }
 
-            if(flag == 0) {
+            if (flag == 0) {
                 allPacketACKed = true;
                 break;
             }
@@ -225,7 +233,10 @@ public class MultiPacketHandler {
     }
 
     private void handleDataPacket(Packet packet) throws IOException {
-        SynAckPacket.setACKed(true);
+        if (SynAckPacket != null)
+            SynAckPacket.setACKed(true);
+        if (FINPacket != null)
+            FINPacket.setACKed(true);
         payloads.put(packet.getSequenceNumber(), packet.getPayload());
 
         sendDataAckPacket(packet.getSequenceNumber());
@@ -339,7 +350,7 @@ public class MultiPacketHandler {
 
 
     public void sendData(String data) throws IOException, InterruptedException {
-        while (true){
+        while (true) {
             Thread.sleep(1000);
             if (HAND_SHAKE_COMPLETE)
                 break;
@@ -355,21 +366,25 @@ public class MultiPacketHandler {
         }
         while (true) {
             Thread.sleep(1000);
-            if (allPacketACKed)
+            if (allPacketACKed) {
                 sendFINPacket();
+                break;
+            }
         }
     }
 
     private void sendFINPacket() throws IOException {
         myFin = true;
-        Packet FIN = new Packet.Builder()
+        FINPacket = new Packet.Builder()
                 .setType(Packet.FIN)
                 .setPeerAddress(destAddress)
                 .setPortNumber(destPort)
                 .setSequenceNumber(mySeqNo++)
                 .setPayload(new byte[0])
                 .create();
-        sendAPacket(FIN);
+        sendAPacket(FINPacket);
+        if(destFin)
+            COMMUNICATION_COMPLETE=true;
     }
 
     private void sendDATAPacket(String payload) throws IOException {
