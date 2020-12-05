@@ -48,7 +48,7 @@ public class UDPClient implements Client {
         return decorateReply(cmd, reply);
     }
 
-    private void sendRequest(Command cmd) throws IOException {
+    private void sendRequest(Command cmd) throws IOException, InterruptedException {
         System.out.println("Generating request to send.");
         String request = "";
         if (cmd.isGet()) {

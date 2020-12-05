@@ -58,13 +58,13 @@ public class UDPClientThread extends Thread {
                     break;
                 }
             }
-        } catch (IOException e) {
+        } catch (IOException | InterruptedException e) {
             e.printStackTrace();
         }
     }
 
 
-    private void handleRequest(String request) throws IOException {
+    private void handleRequest(String request) throws IOException, InterruptedException {
         Message msg = new Message(request, inbox);
         outbox.add(msg);
         requestMade = true;

@@ -207,6 +207,21 @@ public class MultiPacketHandler {
         if(sentPackets.containsKey(seq)){
             sentPackets.get(seq).setACKed(true);
         }
+
+        System.out.println("checking if all acked");
+        while(true) {
+            int flag = 0;
+            for (Packet p : sentPackets.values()) {
+                if (!p.isACKed()) {
+                    flag = 1;
+                }
+            }
+
+            if(flag == 0) {
+                allPacketACKed = true;
+                break;
+            }
+        }
     }
 
     private void handleDataPacket(Packet packet) throws IOException {
@@ -323,10 +338,12 @@ public class MultiPacketHandler {
     }
 
 
-    public void sendData(String data) throws IOException {
-        while (true)
+    public void sendData(String data) throws IOException, InterruptedException {
+        while (true){
+            Thread.sleep(1000);
             if (HAND_SHAKE_COMPLETE)
                 break;
+        }
         System.out.println("Generating packets to send.");
         ArrayList<String> payloads = generatePayloads(data);
 
@@ -336,9 +353,11 @@ public class MultiPacketHandler {
 
             System.out.println("Request Packet #" + (mySeqNo - 1) + " sent to " + routerAddress);
         }
-        while (true)
+        while (true) {
+            Thread.sleep(1000);
             if (allPacketACKed)
                 sendFINPacket();
+        }
     }
 
     private void sendFINPacket() throws IOException {
