@@ -10,7 +10,11 @@ import java.net.MalformedURLException;
 import java.net.SocketAddress;
 import java.net.URL;
 import java.nio.channels.DatagramChannel;
+import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
+import java.util.Locale;
 
 public class UDPClient implements Client {
     private Command cmd;
@@ -37,6 +41,7 @@ public class UDPClient implements Client {
 
             openChannel();
             //System.out.println("Channel Opened.");
+
             sendRequest(cmd);
             reply = getReply();
 
@@ -54,7 +59,7 @@ public class UDPClient implements Client {
             request = generatePostRequest(cmd);
         }
 
-        pktHandler.sendData(request);
+            pktHandler.sendData(request);
 
     }
 
@@ -155,6 +160,30 @@ public class UDPClient implements Client {
             Thread.sleep(1000);
             if (pktHandler.allPacketsReceived())
                 return pktHandler.getMsg();
+            if (pktHandler.timeouted()) {
+                return serverUnresponsive();
+            }
+        }
+    }
+
+    private String serverUnresponsive() {
+        {
+            String head="";
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("EEE, dd MMM yyyy HH:mm:ss O", Locale.ENGLISH);
+
+            String body;
+
+            head += "HTTP/1.1 500 Internal Server Error\r\n";
+            head += "Date: " + formatter.format(ZonedDateTime.now(ZoneOffset.UTC)) + "\r\n";
+            body = "Internal Server Error";
+
+            head += "Content-Length: " + body.length() + "\r\n";
+            head += "Connection: Close\r\n";
+            head += "Server: Localhost\r\n";
+
+            body = head + "\r\n" + body;
+
+            return body;
         }
     }
 

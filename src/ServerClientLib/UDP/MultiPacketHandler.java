@@ -31,6 +31,7 @@ public class MultiPacketHandler {
     private boolean destFin = false;
     private boolean HAND_SHAKE_COMPLETE = false;
     private boolean allPacketsReceived = false;
+    private boolean unresponsiveOther=false;
     private final int TIMEOUT = 5000;
     public boolean COMMUNICATION_COMPLETE = false;
     private boolean allPacketACKed = false;
@@ -43,6 +44,7 @@ public class MultiPacketHandler {
     private Packet ACKPacket;
     private Packet FINPacket;
     private Packet FinAckPacket;
+
 
     public MultiPacketHandler(DatagramChannel channel, SocketAddress routerAddress, InetSocketAddress destAddress) {
         this.channel = channel;
@@ -66,6 +68,7 @@ public class MultiPacketHandler {
                 .create();
 
         sendAPacket(SYNPacket);
+        System.out.println("Sent SYN packet.");
     }
 
     //start a new infinite thread and send it after every timeout until packet is acknowledged
@@ -75,14 +78,18 @@ public class MultiPacketHandler {
             @Override
             public void run() {
                 try {
+                    int trial =0;
                     do {
                         channel.send(packet.toBuffer(), routerAddress);
                         if (packet.getType() == Packet.DATA && !sentPackets.containsKey(packet.getSequenceNumber())) {
                             sentPackets.put(packet.getSequenceNumber(), packet);
                         }
-                        Thread.sleep(TIMEOUT);
+                        Thread.sleep(TIMEOUT/10);
 
-                    } while (!packet.isACKed());
+                        if(++trial==10){
+                            COMMUNICATION_COMPLETE=true;
+                        }
+                    } while (!(COMMUNICATION_COMPLETE || packet.isACKed()));
 
                 } catch (InterruptedException e) {
                     e.printStackTrace();
@@ -130,6 +137,8 @@ public class MultiPacketHandler {
             case Packet.FIN_ACK: {
                 FINPacket.setACKed(true);
                 System.out.println("Received a FinAck packet");
+                if(destFin)
+                    COMMUNICATION_COMPLETE=true;
                 //set fin-ack=true
                 break;
             }
@@ -192,9 +201,7 @@ public class MultiPacketHandler {
     private void handleSYNPacket(Packet packet) throws IOException {
 
         destSeqNo = packet.getSequenceNumber();
-
-        //genSyn-Ack()->send packet>syn-ack,dest addr,my-seq
-        mySeqNo = 1L;
+        mySeqNo = 100L;
 
         sendSynAckPacket();
     }
@@ -218,15 +225,15 @@ public class MultiPacketHandler {
 
         //System.out.println("Checking if all packets are Acked");
 
-        int flag = 0;
+        allPacketACKed = true;
         for (Packet p : sentPackets.values()) {
             if (!p.isACKed()) {
-                flag = 1;
+
+                allPacketACKed = false;
+                break;
             }
         }
-        if (flag == 0) {
-            allPacketACKed = true;
-        }
+
     }
 
     private void handleDataPacket(Packet packet) throws IOException {
@@ -314,6 +321,7 @@ public class MultiPacketHandler {
                         Set<SelectionKey> keys = timeoutFunc(TIMEOUT);
                         if (keys == null) {
                             System.out.println("No response after timeout");
+                            unresponsiveOther=true;
                             COMMUNICATION_COMPLETE = true;
                             continue;
                         }
@@ -329,6 +337,7 @@ public class MultiPacketHandler {
             }
         }).start();
     }
+
 
     private Set<SelectionKey> timeoutFunc(int TIMEOUT) throws IOException {
         // Try to receive a packet within timeout.
@@ -351,6 +360,8 @@ public class MultiPacketHandler {
             Thread.sleep(1000);
             if (HAND_SHAKE_COMPLETE)
                 break;
+            if(unresponsiveOther)
+                return;
         }
         //System.out.println("Generating packets to send.");
         ArrayList<String> payloads = generatePayloads(data);
@@ -380,8 +391,9 @@ public class MultiPacketHandler {
                 .setPayload(new byte[0])
                 .create();
         sendAPacket(FINPacket);
-        if(destFin)
-            COMMUNICATION_COMPLETE=true;
+        System.out.println("Sent FIN packet");
+//        if(destFin)
+//            COMMUNICATION_COMPLETE=true;
     }
 
     private void sendDATAPacket(String payload) throws IOException {
@@ -397,5 +409,9 @@ public class MultiPacketHandler {
 
     public String getMsg() {
         return mergeAllPackets();
+    }
+
+    public boolean timeouted() {
+        return unresponsiveOther;
     }
 }
