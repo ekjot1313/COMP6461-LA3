@@ -31,13 +31,15 @@ public class MultiPacketHandler {
     private boolean destFin = false;
     private boolean HAND_SHAKE_COMPLETE = false;
     private boolean allPacketsReceived = false;
-    private boolean unresponsiveOther=false;
+    private boolean unresponsiveOther = false;
     private final int TIMEOUT = 5000;
     public boolean COMMUNICATION_COMPLETE = false;
     private boolean allPacketACKed = false;
 
     private HashMap<Long, byte[]> payloads = new HashMap<>();
     private HashMap<Long, Packet> sentPackets = new HashMap<>();
+    private long MAX_WINDOW_SIZE = 4;
+    private long windowLowerBound;
 
     private Packet SYNPacket;
     private Packet SynAckPacket;
@@ -72,24 +74,26 @@ public class MultiPacketHandler {
     }
 
     //start a new infinite thread and send it after every timeout until packet is acknowledged
-    void sendAPacket(Packet packet) throws IOException {
-
+    void sendAPacket(Packet packet) {
+        try {
+            SRQ(packet);
+        } catch (InterruptedException e) {
+            System.out.println(e);
+        }
         (new Thread() {
             @Override
             public void run() {
                 try {
-                    int trial =0;
+                    int trial = 0;
                     do {
                         channel.send(packet.toBuffer(), routerAddress);
-                        if (packet.getType() == Packet.DATA && !sentPackets.containsKey(packet.getSequenceNumber())) {
-                            sentPackets.put(packet.getSequenceNumber(), packet);
-                        }
-                        Thread.sleep(TIMEOUT/10);
+                        Thread.sleep(TIMEOUT / 10);
 
-                        if(++trial==10){
-                            COMMUNICATION_COMPLETE=true;
+                        if (++trial == 10) {
+                            COMMUNICATION_COMPLETE = true;
                         }
                     } while (!(COMMUNICATION_COMPLETE || packet.isACKed()));
+
 
                 } catch (InterruptedException e) {
                     e.printStackTrace();
@@ -100,6 +104,23 @@ public class MultiPacketHandler {
         }).start();
     }
 
+    private void SRQ(Packet packet) throws InterruptedException {
+
+        long pktSeq = packet.getSequenceNumber();
+        if (packet.getType() == Packet.DATA && !sentPackets.containsKey(pktSeq)) {
+            System.out.println("Got data pkt in SRQ.");
+            System.out.println(pktSeq + "   " + windowLowerBound);
+            //wait until window get some room
+            while (!(pktSeq >= windowLowerBound && pktSeq < windowLowerBound + MAX_WINDOW_SIZE)) {
+                System.out.println("Waiting inside SRQ. ");
+                System.out.println(pktSeq + "   " + windowLowerBound);
+                Thread.sleep(100);
+            }
+            System.out.println("Wait over. Sending...");
+
+            sentPackets.put(packet.getSequenceNumber(), packet);
+        }
+    }
 
     public void addNewPacket(Packet packet) throws IOException {
 
@@ -137,8 +158,8 @@ public class MultiPacketHandler {
             case Packet.FIN_ACK: {
                 FINPacket.setACKed(true);
                 System.out.println("Received a FinAck packet");
-                if(destFin)
-                    COMMUNICATION_COMPLETE=true;
+                if (destFin)
+                    COMMUNICATION_COMPLETE = true;
                 //set fin-ack=true
                 break;
             }
@@ -152,20 +173,20 @@ public class MultiPacketHandler {
     private void handleFINPacket(Packet packet) throws IOException {
         destFin = true;
         allPacketsReceived = true;
-        sendFinAckPacket();
-        if(myFin){
-            COMMUNICATION_COMPLETE=true;
+        sendFinAckPacket(packet.getSequenceNumber());
+        if (myFin) {
+            COMMUNICATION_COMPLETE = true;
         }
     }
 
-    private void sendFinAckPacket() throws IOException {
+    private void sendFinAckPacket(long sequenceNumber) throws IOException {
 
         //System.out.println("Sending FIN-ACK Pack");
         FinAckPacket = new Packet.Builder()
                 .setType(Packet.FIN_ACK)
                 .setPeerAddress(destAddress)
                 .setPortNumber(destPort)
-                .setSequenceNumber(mySeqNo++)
+                .setSequenceNumber(sequenceNumber)
                 .setPayload(new byte[0])
                 .create();
         FinAckPacket.setACKed(true);
@@ -186,15 +207,17 @@ public class MultiPacketHandler {
     }
 
     private void sendACKPacket() throws IOException {
-        ACKPacket = new Packet.Builder()
-                .setType(Packet.ACK)
-                .setPeerAddress(destAddress)
-                .setPortNumber(destPort)
-                .setSequenceNumber(mySeqNo++)
-                .setPayload(new byte[0])
-                .create();
-        ACKPacket.setACKed(true);
-        sendAPacket(ACKPacket);
+        if (ACKPacket == null) {
+            ACKPacket = new Packet.Builder()
+                    .setType(Packet.ACK)
+                    .setPeerAddress(destAddress)
+                    .setPortNumber(destPort)
+                    .setSequenceNumber(mySeqNo++)
+                    .setPayload(new byte[0])
+                    .create();
+            ACKPacket.setACKed(true);
+            sendAPacket(ACKPacket);
+        }
 
     }
 
@@ -224,21 +247,31 @@ public class MultiPacketHandler {
         }
 
         //System.out.println("Checking if all packets are Acked");
-
-        allPacketACKed = true;
-        for (Packet p : sentPackets.values()) {
-            if (!p.isACKed()) {
-
-                allPacketACKed = false;
-                break;
-            }
+//garbage collection from window
+        for (long i = 0; i < MAX_WINDOW_SIZE; i++) {
+            if (sentPackets.containsKey(windowLowerBound) && sentPackets.get(windowLowerBound).isACKed()) {
+                sentPackets.remove(windowLowerBound);
+                windowLowerBound++;
+                System.out.println("Sliding sender window " + windowLowerBound + "->" + windowLowerBound + MAX_WINDOW_SIZE);
+            } else break;
         }
+        allPacketACKed = sentPackets.size() == 0;
+//        allPacketACKed = true;
+//        for (Packet p : sentPackets.values()) {
+//            if (!p.isACKed()) {
+//
+//                allPacketACKed = false;
+//                break;
+//            }
+//        }
 
     }
 
     private void handleDataPacket(Packet packet) throws IOException {
-        if (SynAckPacket != null)
+        if (SynAckPacket != null) {
             SynAckPacket.setACKed(true);
+            HAND_SHAKE_COMPLETE = true;
+        }
         if (FINPacket != null)
             FINPacket.setACKed(true);
         payloads.put(packet.getSequenceNumber(), packet.getPayload());
@@ -321,7 +354,7 @@ public class MultiPacketHandler {
                         Set<SelectionKey> keys = timeoutFunc(TIMEOUT);
                         if (keys == null) {
                             System.out.println("No response after timeout");
-                            unresponsiveOther=true;
+                            unresponsiveOther = true;
                             COMMUNICATION_COMPLETE = true;
                             continue;
                         }
@@ -360,21 +393,23 @@ public class MultiPacketHandler {
             Thread.sleep(1000);
             if (HAND_SHAKE_COMPLETE)
                 break;
-            if(unresponsiveOther)
+            if (unresponsiveOther)
                 return;
         }
+        System.out.println(data);
         //System.out.println("Generating packets to send.");
         ArrayList<String> payloads = generatePayloads(data);
-
-        for (int i = 0; i < payloads.size(); i++) {
+        windowLowerBound = mySeqNo;
+        int i;
+        for (i = 0; i < payloads.size(); i++) {
             String payload = payloads.get(i);
             sendDATAPacket(payload);
 
             //System.out.println("Request Packet #" + (mySeqNo - 1) + " sent to " + routerAddress);
         }
         while (true) {
-            Thread.sleep(1000);
-            if (allPacketACKed) {
+            Thread.sleep(100);
+            if (allPacketACKed && windowLowerBound == mySeqNo) {
                 sendFINPacket();
                 break;
             }

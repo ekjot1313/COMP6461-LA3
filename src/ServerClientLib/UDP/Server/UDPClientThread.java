@@ -57,7 +57,7 @@ public class UDPClientThread extends Thread {
                 if (pktHandler.allPacketsReceived()) {
                     if(VERBOSE)
                         System.out.println("Starting to create a reply.");
-                    String request = pktHandler.mergeAllPackets();
+                    String request = pktHandler.mergeAllPackets().trim();
                     handleRequest(request);
                     break;
                 }
