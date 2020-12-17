@@ -131,7 +131,7 @@ public class CommandLineInterface {
                 arg = "\'";
                 String s = br.readLine();
                 while (s != null) {
-                    arg += s;
+                    arg += s + "\n";
                     s = br.readLine();
                 }
             } catch (Exception e) {

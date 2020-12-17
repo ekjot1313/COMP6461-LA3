@@ -38,7 +38,7 @@ public class MultiPacketHandler {
 
     private HashMap<Long, byte[]> payloads = new HashMap<>();
     private HashMap<Long, Packet> sentPackets = new HashMap<>();
-    private long MAX_WINDOW_SIZE = 4;
+    private long MAX_WINDOW_SIZE = 2;
     private long windowLowerBound;
 
     private Packet SYNPacket;
@@ -76,7 +76,7 @@ public class MultiPacketHandler {
     //start a new infinite thread and send it after every timeout until packet is acknowledged
     void sendAPacket(Packet packet) {
         try {
-            SRQ(packet);
+            SRQ_Sending(packet);
         } catch (InterruptedException e) {
             System.out.println(e);
         }
@@ -104,14 +104,15 @@ public class MultiPacketHandler {
         }).start();
     }
 
-    private void SRQ(Packet packet) throws InterruptedException {
+    private void SRQ_Sending(Packet packet) throws InterruptedException {
 
         long pktSeq = packet.getSequenceNumber();
         if (packet.getType() == Packet.DATA && !sentPackets.containsKey(pktSeq)) {
             System.out.println("Got data pkt in SRQ.");
             System.out.println(pktSeq + "   " + windowLowerBound);
             //wait until window get some room
-            while (!(pktSeq >= windowLowerBound && pktSeq < windowLowerBound + MAX_WINDOW_SIZE)) {
+            int i = 0;
+            while (!(pktSeq >= windowLowerBound && pktSeq < windowLowerBound + MAX_WINDOW_SIZE) && i++ < 50) {
                 System.out.println("Waiting inside SRQ. ");
                 System.out.println(pktSeq + "   " + windowLowerBound);
                 Thread.sleep(100);
@@ -200,9 +201,14 @@ public class MultiPacketHandler {
     }
 
     private void handleSynAckPacket(Packet packet) throws IOException {
+        if (!SYNPacket.isACKed()) {
+            destSeqNo = packet.getSequenceNumber();
+            destSeqNo++;
+        }
         SYNPacket.setACKed(true);
         sendACKPacket();
         HAND_SHAKE_COMPLETE = true;
+
         System.out.println("Handshake Complete.");
     }
 
@@ -216,17 +222,19 @@ public class MultiPacketHandler {
                     .setPayload(new byte[0])
                     .create();
             ACKPacket.setACKed(true);
-            sendAPacket(ACKPacket);
+            //sendAPacket(ACKPacket);
         }
 
     }
 
     private void handleSYNPacket(Packet packet) throws IOException {
+        if (SynAckPacket == null) {
+            destSeqNo = packet.getSequenceNumber();
+            mySeqNo = 100L;
 
-        destSeqNo = packet.getSequenceNumber();
-        mySeqNo = 100L;
-
-        sendSynAckPacket();
+            sendSynAckPacket();
+            destSeqNo += 2;
+        }
     }
 
     private void sendSynAckPacket() throws IOException {
@@ -234,7 +242,7 @@ public class MultiPacketHandler {
                 .setType(Packet.SYN_ACK)
                 .setPeerAddress(destAddress)
                 .setPortNumber(destPort)
-                .setSequenceNumber(mySeqNo)
+                .setSequenceNumber(mySeqNo++)
                 .setPayload(new byte[0])
                 .create();
         sendAPacket(SynAckPacket);
@@ -274,10 +282,24 @@ public class MultiPacketHandler {
         }
         if (FINPacket != null)
             FINPacket.setACKed(true);
-        payloads.put(packet.getSequenceNumber(), packet.getPayload());
-
-        sendDataAckPacket(packet.getSequenceNumber());
+        System.out.println(packet.getSequenceNumber() + "   " + destSeqNo);
+        SRQ_Receive(packet);
     }
+
+    private void SRQ_Receive(Packet packet) throws IOException {
+        long pktSeq = packet.getSequenceNumber();
+        if (pktSeq >= destSeqNo && pktSeq < destSeqNo + MAX_WINDOW_SIZE) {
+            System.out.println("inside 1 ");
+            payloads.put(pktSeq, packet.getPayload());
+            if (pktSeq == destSeqNo) {
+                System.out.println("inside 2");
+                destSeqNo++;
+            }
+            sendDataAckPacket(pktSeq);
+        } else if (pktSeq < destSeqNo)
+            sendDataAckPacket(pktSeq);
+    }
+
 
     private void sendDataAckPacket(long sequenceNumber) throws IOException {
         Packet dataAck = new Packet.Builder()
