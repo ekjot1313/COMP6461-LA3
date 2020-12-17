@@ -8,7 +8,7 @@ import java.util.Scanner;
 public class httpc {
     public static void main(String[] args) throws IOException, InterruptedException {
 
-        String input=readCommand();
+        String input = readCommand();
 
         //read input until client press 'return' key
         while (input.length() > 0) {
@@ -20,7 +20,7 @@ public class httpc {
 
             RequestHandler.handle(cmd);
 
-            input=readCommand();
+            input = readCommand();
         }
 
         System.out.println("Exiting...");

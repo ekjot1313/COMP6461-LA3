@@ -1,8 +1,8 @@
 package Client;
 
 import ServerClientLib.Client;
-import ServerClientLib.dao.Command;
 import ServerClientLib.UDP.Client.UDPClient;
+import ServerClientLib.dao.Command;
 
 import java.io.BufferedWriter;
 import java.io.FileWriter;
@@ -10,7 +10,7 @@ import java.io.IOException;
 
 public class RequestHandler {
 
-     static void handle(Command cmd) throws IOException, InterruptedException {
+    static void handle(Command cmd) throws IOException, InterruptedException {
         if (cmd.checkValidity()) {
 
 //          Client client = new HTTPClient();

@@ -53,7 +53,7 @@ public class UDPServer implements Server {
         while (true) {
             buf.clear();
             //if (VERBOSE)
-                //System.out.println("Waiting for a packet...");
+            //System.out.println("Waiting for a packet...");
 
             SocketAddress router = channel.receive(buf);
 

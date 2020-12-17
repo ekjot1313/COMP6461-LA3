@@ -59,7 +59,7 @@ public class UDPClient implements Client {
             request = generatePostRequest(cmd);
         }
 
-            pktHandler.sendData(request);
+        pktHandler.sendData(request);
 
     }
 
@@ -168,7 +168,7 @@ public class UDPClient implements Client {
 
     private String serverUnresponsive() {
         {
-            String head="";
+            String head = "";
             DateTimeFormatter formatter = DateTimeFormatter.ofPattern("EEE, dd MMM yyyy HH:mm:ss O", Locale.ENGLISH);
 
             String body;

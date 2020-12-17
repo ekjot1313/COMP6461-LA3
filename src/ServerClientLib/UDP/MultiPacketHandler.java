@@ -222,7 +222,7 @@ public class MultiPacketHandler {
                     .setPayload(new byte[0])
                     .create();
             ACKPacket.setACKed(true);
-            //sendAPacket(ACKPacket);
+            sendAPacket(ACKPacket);
         }
 
     }
@@ -260,7 +260,7 @@ public class MultiPacketHandler {
             if (sentPackets.containsKey(windowLowerBound) && sentPackets.get(windowLowerBound).isACKed()) {
                 sentPackets.remove(windowLowerBound);
                 windowLowerBound++;
-                System.out.println("Sliding sender window " + windowLowerBound + "->" + windowLowerBound + MAX_WINDOW_SIZE);
+                System.out.println("Sliding sender window " + windowLowerBound + "->" + (windowLowerBound + MAX_WINDOW_SIZE-1));
             } else break;
         }
         allPacketACKed = sentPackets.size() == 0;
@@ -282,18 +282,23 @@ public class MultiPacketHandler {
         }
         if (FINPacket != null)
             FINPacket.setACKed(true);
-        System.out.println(packet.getSequenceNumber() + "   " + destSeqNo);
+        System.out.println(packet.getSequenceNumber() + "   " + destSeqNo+"->"+(destSeqNo + MAX_WINDOW_SIZE-1));
         SRQ_Receive(packet);
     }
 
     private void SRQ_Receive(Packet packet) throws IOException {
         long pktSeq = packet.getSequenceNumber();
         if (pktSeq >= destSeqNo && pktSeq < destSeqNo + MAX_WINDOW_SIZE) {
-            System.out.println("inside 1 ");
+//            System.out.println("inside 1 ");
             payloads.put(pktSeq, packet.getPayload());
             if (pktSeq == destSeqNo) {
-                System.out.println("inside 2");
-                destSeqNo++;
+//                System.out.println("inside 2");
+                long i;
+                for(i=pktSeq;i<destSeqNo + MAX_WINDOW_SIZE;i++){
+                    if(!payloads.containsKey(i))
+                        break;
+                }
+                destSeqNo=i;
             }
             sendDataAckPacket(pktSeq);
         } else if (pktSeq < destSeqNo)
@@ -418,7 +423,7 @@ public class MultiPacketHandler {
             if (unresponsiveOther)
                 return;
         }
-        System.out.println(data);
+//        System.out.println(data);
         //System.out.println("Generating packets to send.");
         ArrayList<String> payloads = generatePayloads(data);
         windowLowerBound = mySeqNo;
